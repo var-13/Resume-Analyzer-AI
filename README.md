@@ -1,4 +1,5 @@
-# Resume Analyzer AI
+# Resume Analyzer AI A simple web application that analyzes resumes and extracts key information using AI and natural language processing.
+
 
 A simple web application that analyzes resumes and extracts key information using AI and natural language processing.
 
