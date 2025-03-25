@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Analyzer AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+        .upload-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+        .result-container {
+            display: none;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 2rem 0;
+        }
+        .skill-badge {
+            margin: 0.25rem;
+            padding: 0.5rem 1rem;
+            background-color: #e9ecef;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        .section-title {
+            color: #0d6efd;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .score-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: conic-gradient(#0d6efd var(--percentage), #e9ecef 0deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            position: relative;
+        }
+        .score-circle::before {
+            content: "";
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: white;
+        }
+        .score-text {
+            position: relative;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        .wordcloud-container {
+            text-align: center;
+            margin: 2rem 0;
+        }
+        .wordcloud-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .summary-point {
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .download-btn {
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <h1 class="text-center mb-4">Resume Analyzer AI</h1>
+        
+        <div class="upload-container">
+            <h2 class="text-center mb-4">Upload Your Resume</h2>
+            <form id="uploadForm" class="text-center">
+                <div class="mb-3">
+                    <input type="file" class="form-control" id="resume" accept=".pdf,.docx" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Analyze Resume</button>
+            </form>
+        </div>
+
+        <div class="loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Analyzing your resume...</p>
+        </div>
+
+        <div class="result-container" id="results">
+            <h2 class="text-center mb-4">Analysis Results</h2>
+            
+            <!-- Score Section -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h3 class="section-title">Resume Score</h3>
+                    <div class="score-circle" id="scoreCircle">
+                        <div class="score-text" id="scoreText">0%</div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <h3 class="section-title">Summary</h3>
+                    <div id="summary"></div>
+                </div>
+            </div>
+
+            <!-- Word Cloud Section -->
+            <div class="wordcloud-container">
+                <h3 class="section-title">Skills Word Cloud</h3>
+                <img id="wordcloud" class="wordcloud-image" src="" alt="Skills Word Cloud">
+            </div>
+            
+            <!-- Detailed Results -->
+            <div class="row">
+                <div class="col-md-6">
+                    <h3 class="section-title">Contact Information</h3>
+                    <div id="contactInfo"></div>
+                </div>
+                
+                <div class="col-md-6">
+                    <h3 class="section-title">Skills</h3>
+                    <div id="skills"></div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <h3 class="section-title">Education</h3>
+                    <div id="education"></div>
+                </div>
+                
+                <div class="col-md-6">
+                    <h3 class="section-title">Experience</h3>
+                    <div id="experience"></div>
+                </div>
+            </div>
+
+            <!-- Download Report Button -->
+            <div class="text-center download-btn">
+                <button class="btn btn-success" onclick="downloadReport()">Download PDF Report</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('resume');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a file');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('resume', file);
+
+            // Show loading, hide results
+            document.querySelector('.loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Display results
+                    displayResults(data);
+                    document.getElementById('results').style.display = 'block';
+                } else {
+                    alert(data.error || 'An error occurred');
+                }
+            } catch (error) {
+                alert('An error occurred while analyzing the resume');
+            } finally {
+                document.querySelector('.loading').style.display = 'none';
+            }
+        });
+
+        function displayResults(data) {
+            // Display score
+            const scoreCircle = document.getElementById('scoreCircle');
+            const scoreText = document.getElementById('scoreText');
+            scoreCircle.style.setProperty('--percentage', `${data.score.percentage}%`);
+            scoreText.textContent = `${data.score.percentage}%`;
+
+            // Display summary
+            const summary = document.getElementById('summary');
+            summary.innerHTML = data.summary.map(point => 
+                `<div class="summary-point">${point}</div>`
+            ).join('');
+
+            // Display word cloud
+            const wordcloud = document.getElementById('wordcloud');
+            wordcloud.src = `data:image/png;base64,${data.wordcloud}`;
+
+            // Display contact information
+            const contactInfo = document.getElementById('contactInfo');
+            contactInfo.innerHTML = `
+                ${data.entities.emails.length ? `<p><strong>Email:</strong> ${data.entities.emails.join(', ')}</p>` : ''}
+                ${data.entities.phones.length ? `<p><strong>Phone:</strong> ${data.entities.phones.join(', ')}</p>` : ''}
+            `;
+
+            // Display skills
+            const skills = document.getElementById('skills');
+            skills.innerHTML = data.entities.skills.length ? 
+                data.entities.skills.map(skill => `<span class="skill-badge">${skill}</span>`).join('') :
+                '<p>No skills detected</p>';
+
+            // Display education
+            const education = document.getElementById('education');
+            education.innerHTML = data.entities.education.length ? 
+                data.entities.education.map(edu => `<p>${edu}</p>`).join('') :
+                '<p>No education information detected</p>';
+
+            // Display experience
+            const experience = document.getElementById('experience');
+            experience.innerHTML = data.entities.experience.length ? 
+                data.entities.experience.map(exp => `<p>${exp}</p>`).join('') :
+                '<p>No experience information detected</p>';
+
+            // Store PDF data for download
+            window.pdfData = data.pdf_report;
+        }
+
+        function downloadReport() {
+            if (!window.pdfData) return;
+            
+            const link = document.createElement('a');
+            link.href = `data:application/pdf;base64,${window.pdfData}`;
+            link.download = 'resume_analysis_report.pdf';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html> 
