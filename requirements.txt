@@ -4,5 +4,6 @@ python-docx==0.8.11
 PyPDF2==3.0.1
 nltk==3.6.3
 python-magic==0.4.24
-wordcloud==1.9.2
-reportlab==4.0.4 
+wordcloud==1.9.4
+reportlab==4.0.4
+gunicorn
